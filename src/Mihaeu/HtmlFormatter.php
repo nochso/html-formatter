@@ -54,7 +54,6 @@ class HtmlFormatter
 			}
 			else if ($element['text'])
 			{
-				// $output[] = "\n".str_repeat($indentWith, $indent).trim($element['content']);
 				$output[] = "\n".str_repeat($indentWith, $indent).preg_replace('/ [ \t]*/', ' ', $element['content']);
 			}
 			else if ($element['comment'])
@@ -86,27 +85,22 @@ class HtmlFormatter
 
 			$currentElement = trim($element);
 
-			// comment
 			if (strpos($currentElement, '<!') === 0)
 			{
 				$isComment = true;
 			}
-			// closing tag
 			else if (strpos($currentElement, '</') === 0)
 			{
 				$isClosing = true;
 			}
-			// stand-alone tag
 			else if (preg_match('/\/>$/', $currentElement))
 			{
 				$isStandalone = true;
 			}
-			// normal opening tag
 			else if (strpos($currentElement, '<') === 0)
 			{
 				$isOpening = true;
 			}
-			// text
 			else
 			{
 				$isText = true;
