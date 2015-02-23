@@ -27,12 +27,13 @@ class HtmlFormatter
 
 		$indent = 0;
 		$output = [];
+		$tagsWithoutIndentationHash = array_flip(explode(',', $tagsWithoutIndentation));
 		foreach ($dom as $index => $element) {
 			if ($element['opening']) {
 				$output[] = "\n" . str_repeat($indentWith, $indent) . trim($element['content']);
 
 				// make sure that only the elements who have not been blacklisted are being indented
-				if (!in_array($element['type'], explode(',', $tagsWithoutIndentation))) {
+				if (!isset($tagsWithoutIndentationHash[$element['type']])) {
 					++$indent;
 				}
 			} else if ($element['standalone']) {
