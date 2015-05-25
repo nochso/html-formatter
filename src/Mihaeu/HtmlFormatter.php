@@ -18,7 +18,8 @@ class HtmlFormatter
 	 *
 	 * @return string Re-indented HTML.
 	 */
-	public static function format($html, $indentWith = '    ', $tagsWithoutIndentation = 'html,link,img,meta')
+	public static function format($html, $indentWith = '    ', $tagsWithoutIndentation = 'html,link,img,meta',
+								  $tagsWithoutNewLine = 'a,b,i,span,h1,h2,h3,title')
 	{
 		// remove all line feeds and replace tabs with spaces
 		$html = str_replace(["\n", "\r", "\t"], ['', '', ' '], $html);
@@ -27,26 +28,40 @@ class HtmlFormatter
 
 		$indent = 0;
 		$output = [];
-		$tagsWithoutIndentationHash = array_flip(explode(',', $tagsWithoutIndentation));
+		$tagsWithoutIndentation = array_flip(explode(',', $tagsWithoutIndentation));
+		$tagsWithoutNewLine = array_flip(explode(',', $tagsWithoutNewLine));
+		$prev = null;
 		foreach ($dom as $index => $element) {
 			if ($element['opening']) {
 				$output[] = "\n" . str_repeat($indentWith, $indent) . trim($element['content']);
-
+				$prev = $element['type'];
 				// make sure that only the elements who have not been blacklisted are being indented
-				if (!isset($tagsWithoutIndentationHash[$element['type']])) {
+				if (!isset($tagsWithoutIndentation[$element['type']])) {
 					++$indent;
 				}
 			} else if ($element['standalone']) {
 				$output[] = "\n" . str_repeat($indentWith, $indent) . trim($element['content']);
 			} else if ($element['closing']) {
 				--$indent;
-				$lf = "\n" . str_repeat($indentWith, $indent);
+				//if ($element['type'] == 'a') {
+				if (isset($tagsWithoutNewLine[$element['type']])) {
+					$lf = '';
+				} else {
+					$lf = "\n" . str_repeat($indentWith, $indent);
+				}
 				if (isset($dom[$index - 1]) && $dom[$index - 1]['opening']) {
 					$lf = '';
 				}
 				$output[] = $lf . trim($element['content']);
 			} else if ($element['text']) {
-				$output[] = "\n" . str_repeat($indentWith, $indent) . preg_replace('/ [ \t]*/', ' ', $element['content']);
+				//if ($prev != null && $prev == 'a') {
+				if ($prev != null && isset($tagsWithoutNewLine[$prev])) {
+					$output[] = preg_replace('/ [ \t]*/', ' ', $element['content']);
+					$prev = null;
+				} else {
+					$output[] = "\n" . str_repeat($indentWith, $indent) . preg_replace('/ [ \t]*/', ' ',
+							$element['content']);
+				}
 			} else if ($element['comment']) {
 				$output[] = "\n" . str_repeat($indentWith, $indent) . trim($element['content']);
 			}
@@ -75,26 +90,31 @@ class HtmlFormatter
 
 			$currentElement = trim($element);
 
+			// comment
 			if (strpos($currentElement, '<!') === 0) {
 				$isComment = true;
-			} else if (strpos($currentElement, '</') === 0) {
+			} // closing tag
+			else if (strpos($currentElement, '</') === 0) {
 				$isClosing = true;
-			} else if (preg_match('/\/>$/', $currentElement)) {
+			} // stand-alone tag
+			else if (preg_match('/\/>$/', $currentElement)) {
 				$isStandalone = true;
-			} else if (strpos($currentElement, '<') === 0) {
+			} // normal opening tag
+			else if (strpos($currentElement, '<') === 0) {
 				$isOpening = true;
-			} else {
+			} // text
+			else {
 				$isText = true;
 			}
 
 			$dom[] = [
-				'text'       => $isText,
-				'comment'    => $isComment,
-				'closing'    => $isClosing,
-				'opening'    => $isOpening,
+				'text' => $isText,
+				'comment' => $isComment,
+				'closing' => $isClosing,
+				'opening' => $isOpening,
 				'standalone' => $isStandalone,
-				'content'    => $element,
-				'type'       => preg_replace('/^<\/?(\w+)[ >].*$/U', '$1', $element)
+				'content' => $element,
+				'type' => preg_replace('/^<\/?(\w+)[ >].*$/U', '$1', $element)
 			];
 		}
 		return $dom;
